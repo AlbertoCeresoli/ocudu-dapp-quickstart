@@ -1,0 +1,65 @@
+# SPDX-FileCopyrightText: Copyright (C) 2026 DeepSig Inc.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+# Split-8 USRP (B200/B210 over UHD) single-cell TDD n78/20 MHz with the dApp
+# platform enabled — the radio-image companion to the platform's
+# configs/gnb_rf_b200_tdd_n78_20mhz.yml. Run inside the radio image with the
+# USB bus passed through (see README "Run with a radio").
+
+cu_cp:
+  amf:
+    addrs: 127.0.1.100
+    port: 38412
+    bind_addrs: 127.0.0.1
+    supported_tracking_areas:
+      - tac: 7
+        plmn_list:
+          - plmn: "00101"
+            tai_slice_support_list:
+              - sst: 1
+
+ru_sdr:
+  device_driver: uhd
+  device_args: type=b200,num_recv_frames=64,num_send_frames=64
+  srate: 23.04
+  otw_format: sc12
+  tx_gain: 80
+  rx_gain: 40
+
+cell_cfg:
+  dl_arfcn: 632628
+  band: 78
+  channel_bandwidth_MHz: 20
+  common_scs: 30
+  plmn: "00101"
+  tac: 7
+  pci: 1
+
+# USRP clocks can introduce CFO; compensate in the channel estimator.
+expert_phy:
+  pusch_channel_estimator_td_strategy: average
+  pusch_channel_estimator_cfo_compensation: true
+
+# The dApp platform: lab posture (no signing keys), local socket + E3AP on
+# loopback inside the container. Point package_manifests at the SDK packages
+# staged under the catalog root (see README).
+dapp:
+  catalog_root: /opt/ocudu/dapps
+  native_preflight_helper: /opt/ocudu/bin/ocudu-dapp-preflight
+  package_signature_mode: allow_unsigned
+  minimum_trust_policy_epoch: 0
+  local_e3:
+    socket_path: /run/ocudu/dapp-management.sock
+  e3ap_sctp:
+    bind_address: 127.0.0.1
+    port: 36423
+
+log:
+  filename: /tmp/gnb.log
+  all_level: warning
+
+pcap:
+  mac_enable: false
+  mac_filename: /tmp/gnb_mac.pcap
+  ngap_enable: false
+  ngap_filename: /tmp/gnb_ngap.pcap

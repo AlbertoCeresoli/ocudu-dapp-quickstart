@@ -1,0 +1,86 @@
+# SPDX-FileCopyrightText: Copyright (C) 2026 DeepSig Inc.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+# Split-7.2 O-RU over Open Fronthaul, single-cell TDD n78/20 MHz, with the
+# dApp platform enabled. The ru_ofh timing/compression values below are the
+# platform's Picocom PC802 SCB example; for another O-RU (WNC, Benetel,
+# Foxconn/LiteON, ...) replace the t1a/ta4 windows, compression, VLANs, and
+# MAC/port mappings with the values from that RU's integration guide — the
+# structure is identical. Run inside the radio image with host networking and
+# the fronthaul NIC prepared (see README "Run with a radio").
+
+cu_cp:
+  amf:
+    addrs: 127.0.1.100
+    port: 38412
+    bind_addrs: 127.0.0.1
+    supported_tracking_areas:
+      - tac: 7
+        plmn_list:
+          - plmn: "00101"
+            tai_slice_support_list:
+              - sst: 1
+
+ru_ofh:
+  t1a_max_cp_dl: 350
+  t1a_min_cp_dl: 250
+  t1a_max_cp_ul: 250
+  t1a_min_cp_ul: 150
+  t1a_max_up: 200
+  t1a_min_up: 80
+  ta4_max: 500
+  ta4_min: 10
+  is_prach_cp_enabled: false
+  compr_method_ul: bfp
+  compr_bitwidth_ul: 9
+  compr_method_dl: bfp
+  compr_bitwidth_dl: 9
+  compr_method_prach: bfp
+  compr_bitwidth_prach: 9
+  iq_scaling: 1.0
+  cells:
+    - network_interface: enp1s0f0        # your fronthaul NIC (inside the container: host networking)
+      ru_mac_addr: ce:fc:6c:09:a6:cd     # the O-RU's MAC
+      du_mac_addr: 80:61:5f:0d:df:aa     # the DU-side NIC MAC
+      vlan_tag_cp: 3
+      vlan_tag_up: 3
+      prach_port_id: [0]
+      dl_port_id: [0]
+      ul_port_id: [0]
+
+cell_cfg:
+  dl_arfcn: 625000
+  band: 78
+  channel_bandwidth_MHz: 20
+  common_scs: 30
+  plmn: "00101"
+  tac: 7
+  pci: 1
+  prach:
+    prach_config_index: 159
+    prach_root_sequence_index: 1
+    zero_correlation_zone: 0
+    prach_frequency_start: 0
+  tdd_ul_dl_cfg:
+    nof_dl_slots: 7
+    nof_ul_slots: 2
+
+# The dApp platform: lab posture (no signing keys), local socket + E3AP on
+# loopback inside the container.
+dapp:
+  catalog_root: /opt/ocudu/dapps
+  native_preflight_helper: /opt/ocudu/bin/ocudu-dapp-preflight
+  package_signature_mode: allow_unsigned
+  minimum_trust_policy_epoch: 0
+  local_e3:
+    socket_path: /run/ocudu/dapp-management.sock
+  e3ap_sctp:
+    bind_address: 127.0.0.1
+    port: 36423
+
+log:
+  filename: /tmp/gnb.log
+  all_level: warning
+
+pcap:
+  mac_enable: false

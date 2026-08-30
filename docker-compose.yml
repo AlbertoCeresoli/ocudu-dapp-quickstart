@@ -1,0 +1,105 @@
+# SPDX-FileCopyrightText: Copyright (C) 2026 DeepSig Inc.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+# Build the public OCUDU dApp/E3 release set in clean CPU and CUDA containers
+# and optionally run the loopback E3 agent against it.
+#
+#   docker compose -f ocudu-docker/docker-compose.yml build
+#   docker compose -f ocudu-docker/docker-compose.yml run --rm tests
+#   docker compose -f ocudu-docker/docker-compose.yml run --rm cuda-tests
+#   docker compose -f ocudu-docker/docker-compose.yml up e3-agent
+#     -> synthetic PUSCH/CRC/SRS telemetry on E3AP sctp/36423 + E3DP sctp/38472
+#
+# The build context is the workspace root that holds ocudu/ and
+# ocudu-dapp-sdk/ side by side.
+
+services:
+  release:
+    build:
+      context: ..
+      dockerfile: ocudu-docker/Dockerfile
+      target: cpu-release
+      args:
+        OCUDU_JOBS: "${OCUDU_JOBS:-8}"
+        OCUDU_BUILD_TYPE: "${OCUDU_BUILD_TYPE:-Release}"
+    image: ocudu-dapp-release:cpu-local
+
+  tests:
+    image: ocudu-dapp-release:cpu-local
+    depends_on: [release]
+    command: ["/bin/bash", "/work/ocudu-docker/scripts/run_tests.sh"]
+
+  release-cuda:
+    build:
+      context: ..
+      dockerfile: ocudu-docker/Dockerfile
+      target: cuda-release
+      args:
+        CUDA_IMAGE: "${OCUDU_CUDA_IMAGE:-nvidia/cuda:13.0.1-devel-ubuntu24.04}"
+        OCUDU_JOBS: "${OCUDU_JOBS:-8}"
+        OCUDU_BUILD_TYPE: "${OCUDU_BUILD_TYPE:-Release}"
+        OCUDU_CUDA_ARCHITECTURES: "${OCUDU_CUDA_ARCHITECTURES:-89-real;90-real;121}"
+    image: ocudu-dapp-release:cuda-local
+
+  cuda-tests:
+    image: ocudu-dapp-release:cuda-local
+    depends_on: [release-cuda]
+    gpus: all
+    command: ["/bin/bash", "/work/ocudu-docker/scripts/run_cuda_tests.sh"]
+
+  # Loopback E3 agent publishing synthetic telemetry on E3AP (36423) and the
+  # FlatBuffers data profile (38472); stdin is kept open by `tty: true`.
+  e3-agent:
+    image: ocudu-dapp-release:cpu-local
+    depends_on: [release]
+    tty: true
+    stdin_open: true
+    command:
+      - /work/ocudu/build/tests/unittests/dapp/e3ap_test_server
+      - --catalog
+      - /tmp
+      - --e3ap-port
+      - "36423"
+      - --e3dp-port
+      - "38472"
+      - --period-ms
+      - "20"
+    ports:
+      - "36423:36423/sctp"
+      - "38472:38472/sctp"
+
+  # ------------------------------------------------------------------
+  # Example gNB services (profiles: opt-in). Radio support (UHD, split-7.2
+  # OFH, DPDK backend) is built into the standard images — no rebuild needed.
+  # See README "Run with a radio" for host preparation.
+
+  # Split-8 USRP (B200/B210 over USB). Host must have the USRP attached.
+  gnb-usrp:
+    image: ocudu-dapp-release:cpu-local
+    depends_on: [release]
+    profiles: [radio]
+    network_mode: host
+    cap_add: [SYS_NICE]
+    ulimits:
+      rtprio: 97
+      memlock: -1
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+    volumes:
+      - ./examples/gnb_b210_split8_dapp.yml:/etc/ocudu/gnb.yml:ro
+    command: ["/work/ocudu/build/apps/gnb/gnb", "-c", "/etc/ocudu/gnb.yml"]
+
+  # Split-7.2 O-RU over Open Fronthaul (WNC-class RUs and similar). Host must
+  # provide PTP sync and the fronthaul NIC; host networking exposes it.
+  gnb-oru:
+    image: ocudu-dapp-release:cpu-local
+    depends_on: [release]
+    profiles: [radio]
+    network_mode: host
+    cap_add: [SYS_NICE, NET_RAW, NET_ADMIN]
+    ulimits:
+      rtprio: 97
+      memlock: -1
+    volumes:
+      - ./examples/gnb_oru_split72_dapp.yml:/etc/ocudu/gnb.yml:ro
+    command: ["/work/ocudu/build/apps/gnb/gnb", "-c", "/etc/ocudu/gnb.yml"]

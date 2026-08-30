@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: Copyright (C) 2026 DeepSig Inc.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+# BuildKit per-Dockerfile ignore: keeps host build trees, VCS metadata, and
+# caches out of the build context uploaded to the daemon. Only COPY'd public
+# paths (ocudu/, ocudu-dapp-sdk/, ocudu-docker/scripts/) enter image layers.
+**/build/
+**/build-*/
+**/.git/
+**/__pycache__/
+**/*.pyc
+**/.venv/
+**/*.sw[op]
+*.tar.gz
+*.pdf
+*.patch
