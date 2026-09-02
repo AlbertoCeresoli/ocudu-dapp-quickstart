@@ -28,6 +28,18 @@ git clone https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-sdk.git
 git clone https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-quickstart.git ocudu-docker
 ```
 
+## Read first: the two papers (preview versions)
+
+Two papers explain the motivation, architecture, measurements, and workflow
+behind everything in this quickstart. Both are preview versions that
+accompany this pre-release and will receive updates as the working group's
+review, new use cases, and measurements land.
+
+| Paper | What it gives you |
+|---|---|
+| [**The OCUDU dApp Platform: An Open Runtime and E3 Interface for Real-Time AI-RAN**](papers/ocudu_dapp_tutorial.pdf) | the architecture and tutorial paper: the 3 execution classes, the E3 plane, where every mechanism lives in the code, how to build, sign, load, and drive a dApp, the 7 use cases, the safety and latency design, and the measured evidence |
+| [**Enabling AI-RAN Applications Through dApp Architecture Decisions: A Measured Study**](papers/ocudu_dapp_interface_study.pdf) | the interface study: an audited corpus of 39 AI-RAN use cases with deadlines and byte counts, the coupling spectrum from an in-process C ABI to E3AP over SCTP, measurements of the real mechanisms used by the OCUDU, Northeastern, and NVIDIA dApp frameworks on a quiet host and with the cell on the air, and the derivation of the released ABI |
+
 ## Start here — the guided path
 
 Fastest working session: clone (above), `ocudu-docker/scripts/build.sh`, then
@@ -54,6 +66,8 @@ live cell (1–4 need no keys):
 | 12 | [Capstone: the whole loop](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-platform/-/blob/main/docs/dapp/tutorial_capstone.md) | capture → train → package → shadow → activate → monitor → rollback |
 
 ## Documentation map
+
+**Papers (preview)** — [architecture and tutorial paper](papers/ocudu_dapp_tutorial.pdf) · [interface study](papers/ocudu_dapp_interface_study.pdf)
 
 **Platform (gNB, runtime, E3)** — [docs index](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-platform/-/blob/main/docs/dapp/README.md):
 [quickstart](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-platform/-/blob/main/docs/dapp/quickstart.md) ·
