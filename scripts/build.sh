@@ -60,6 +60,7 @@ common_args=(
   --build-arg "OCUDU_BUILD_TYPE=${OCUDU_BUILD_TYPE:-Release}"
   --build-arg "OCUDU_PLATFORM_REVISION=${platform_revision}"
   --build-arg "OCUDU_SDK_REVISION=${sdk_revision}"
+  --build-arg "OCUDU_REQUIRE_SCTP=${OCUDU_REQUIRE_SCTP:-0}"
 )
 if [[ -n "${OCUDU_DOCKER_BUILD_ARGS:-}" ]]; then
   # Extra `docker build` arguments, e.g. --progress=plain or cache options in CI.

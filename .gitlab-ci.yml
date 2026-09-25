@@ -5,12 +5,17 @@
 # the release gates in them.
 #
 #   lint           script checks and upstream refs (seconds)
-#   cpu image      fetch sources -> build cpu-release (host, E3 and SDK gates run
-#                  in the build) -> re-run the gates in the image -> E3 smoke test
-#                  -> publish to this project's registry from the default branch
+#   cpu image      fetch sources -> build cpu-release (host and SDK gates run in
+#                  the build) -> re-run the gates in the image -> publish to this
+#                  project's registry
+#   cpu e3 gates   the E3 gates over SCTP and a live E3 smoke test in that image, on
+#                  a runner whose kernel has SCTP; set OCUDU_SCTP_RUNNER_TAG
 #   cuda image     cuda-release compile (device-free gates); default branch,
 #                  schedules and on demand
 #   cuda gpu gates the CUDA runtime gates on a GPU runner; set OCUDU_GPU_RUNNER_TAG
+#
+# The GitLab.com SaaS runners have no SCTP in their kernel, so the image jobs skip
+# the SCTP transport tests (the gates print a notice); `cpu e3 gates` runs them.
 #
 # The platform and SDK refs default to main; set OCUDU_PLATFORM_REF and
 # OCUDU_SDK_REF (commit, branch or tag) when running a pipeline to build a
@@ -20,6 +25,7 @@
 stages:
   - lint
   - build and test
+  - e3
 
 variables:
   OCUDU_PLATFORM_URL: https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-platform.git
@@ -29,8 +35,7 @@ variables:
   OCUDU_JOBS: "4"
   # Runner size prefix, as in the OCUDU platform CI: the image jobs run on
   # ${OCUDU_RUNNER_TAG}-amd64. A group or project CI/CD variable overrides it (the WG2
-  # group sets saas-linux-large). The E3 gates need SCTP from the runner's kernel; the
-  # jobs check for it first.
+  # group sets saas-linux-large).
   OCUDU_RUNNER_TAG: saas-linux-medium
   DOCKER_VERSION: "28"
   DOCKER_TLS_CERTDIR: /certs
@@ -70,11 +75,6 @@ lint:
     - set -o pipefail
     - apk add --no-cache bash git tar
     - docker info --format 'docker {{.ServerVersion}}, {{.NCPU}} CPUs, {{.MemTotal}} bytes'
-    # Fail early and clearly when the runner kernel cannot open SCTP sockets.
-    - >-
-      docker run --rm python:3.12-alpine python -c
-      "import socket; socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_SCTP).close()"
-      || { echo "This runner cannot open SCTP sockets; set OCUDU_RUNNER_TAG to the size prefix of a runner with the sctp kernel module."; exit 1; }
     - scripts/fetch_sources.sh "${OCUDU_WORKSPACE}"
     - cat "${OCUDU_WORKSPACE}/sources.env"
   artifacts:
@@ -96,36 +96,61 @@ cpu image:
       OCUDU_DOCKER_BUILD_ARGS="--progress=plain"
       "${OCUDU_WORKSPACE}/ocudu-docker/scripts/build.sh" 2>&1 | tee cpu-build.log
     - docker image inspect "${IMAGE}" --format '{{json .Config.Labels}}'
-    # The release gates again, in the finished image: runtime and E3 tests, the Python E3
-    # client, the release docs, and the full SDK suite with its E3 examples.
+    # The release gates again, in the finished image: runtime tests, the release docs, and the
+    # full SDK suite (the E3-over-SCTP parts need a kernel with SCTP; see cpu e3 gates).
     - docker run --rm "${IMAGE}" bash /work/ocudu-docker/scripts/run_tests.sh 2>&1 | tee cpu-tests.log
-    # E3 smoke test across containers: the loopback agent in one, the Python client in another.
-    - docker network create e3-smoke
-    # (-i keeps the agent's stdin open; it exits when stdin closes.)
-    - >-
-      docker run -d --name e3-agent --network e3-smoke -i "${IMAGE}"
-      /work/ocudu/build/tests/unittests/dapp/e3ap_test_server --catalog /tmp
-      --bind-address 0.0.0.0 --e3ap-port 36423 --e3dp 0
-    - sleep 3
-    - >-
-      docker run --rm --network e3-smoke "${IMAGE}"
-      python3 -m ocudu_e3 --host e3-agent --port 36423 catalog 2>&1 | tee e3-smoke.log
-    - >-
-      docker run --rm --network e3-smoke "${IMAGE}"
-      python3 -m ocudu_e3 --host e3-agent --port 36423 subscribe pusch.crc srs.channel --maximum 20 --duration 10
-      2>&1 | tee -a e3-smoke.log
-    # Records must actually stream, not just appear in the catalog.
-    - grep -q '^\[pusch.crc\]' e3-smoke.log
-    - grep -q '^\[srs.channel\]' e3-smoke.log
-    - docker rm -f e3-agent
+    # Publish: cpu-<sha> for every pipeline that runs the E3 gates, plus cpu (and cpu-<tag>)
+    # from the default branch and tags.
     - |
+      tags=""
+      if [ -n "${OCUDU_SCTP_RUNNER_TAG}" ]; then tags="cpu-${CI_COMMIT_SHORT_SHA}"; fi
       if [ "${CI_COMMIT_BRANCH}" = "${CI_DEFAULT_BRANCH}" ] || [ -n "${CI_COMMIT_TAG}" ]; then
+        tags="cpu-${CI_COMMIT_SHORT_SHA} cpu${CI_COMMIT_TAG:+-${CI_COMMIT_TAG}}"
+      fi
+      if [ -n "${tags}" ]; then
         echo "${CI_REGISTRY_PASSWORD}" | docker login -u "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
-        for tag in "cpu-${CI_COMMIT_SHORT_SHA}" "cpu${CI_COMMIT_TAG:+-${CI_COMMIT_TAG}}" ; do
+        for tag in ${tags}; do
           docker tag "${IMAGE}" "${CI_REGISTRY_IMAGE}:${tag}"
           docker push "${CI_REGISTRY_IMAGE}:${tag}"
         done
       fi
+
+# The E3 gates over SCTP, in the image cpu image published. SCTP comes from the runner's
+# kernel, which the GitLab.com SaaS runners do not provide: register a runner on a host with
+# the sctp module loaded (e.g. the platform's `sctp` runner) and set OCUDU_SCTP_RUNNER_TAG to
+# its tag. The job runs in the image itself, so any executor that runs images works.
+cpu e3 gates:
+  stage: e3
+  needs: [cpu image]
+  image: ${CI_REGISTRY_IMAGE}:cpu-${CI_COMMIT_SHORT_SHA}
+  tags:
+    - ${OCUDU_SCTP_RUNNER_TAG}
+  rules:
+    - if: $OCUDU_SCTP_RUNNER_TAG
+  timeout: 30m
+  script:
+    - set -o pipefail
+    - OCUDU_REQUIRE_SCTP=1 bash /work/ocudu-docker/scripts/run_tests.sh 2>&1 | tee e3-gates.log
+    # Live E3 smoke test through a non-loopback address: the loopback agent listens on all
+    # interfaces (it exits when its stdin closes, so a sleep holds it open) and the Python
+    # client reaches it through this container's own address.
+    - address="$(hostname -i | awk '{print $1}')"
+    - >-
+      (sleep 60 | /work/ocudu/build/tests/unittests/dapp/e3ap_test_server --catalog /tmp
+      --bind-address 0.0.0.0 --e3ap-port 36423 --e3dp 0 > e3-agent.log 2>&1 &)
+    - sleep 3
+    - python3 -m ocudu_e3 --host "${address}" --port 36423 catalog 2>&1 | tee e3-smoke.log
+    - >-
+      python3 -m ocudu_e3 --host "${address}" --port 36423 subscribe pusch.crc srs.channel
+      --maximum 20 --duration 10 2>&1 | tee -a e3-smoke.log
+    # Records must actually stream, not just appear in the catalog.
+    - grep -q '^\[pusch.crc\]' e3-smoke.log
+    - grep -q '^\[srs.channel\]' e3-smoke.log
+  artifacts:
+    when: always
+    paths:
+      - "*.log"
+    expire_in: 30 days
 
 cuda image:
   extends: .docker build

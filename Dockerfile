@@ -91,17 +91,18 @@ RUN --mount=type=cache,id=ocudu-host-ccache,target=/root/.cache/ccache \
       dapp_runtime_test e3ap_test_server \
   && cmake --install /work/ocudu/build --prefix /opt/ocudu --component dapp_sdk
 
-# Host gates that cover the release surface touched by the E3 work.
-RUN cd /work/ocudu/build \
-  && ./tests/unittests/dapp/dapp_runtime_test --gtest_filter=-dapp_class_c_process_supervisor.requires_seccomp_filter_before_route_admission_when_configured \
-  && OCUDU_E3_SCHEMA_DIR=/work/ocudu/schemas/e3 python3 /work/ocudu/python/tests/test_e3ap_client.py \
-      --server /work/ocudu/build/tests/unittests/dapp/e3ap_test_server \
-  && python3 /work/ocudu/scripts/check_dapp_release_docs.py
+# Host gates that cover the release surface touched by the E3 work. The E3
+# transports need SCTP from the build machine's kernel; without it those gates
+# are skipped with a notice, and OCUDU_REQUIRE_SCTP=1 makes that a failure.
+ARG OCUDU_REQUIRE_SCTP=0
+COPY --chmod=0755 ocudu-docker/scripts/run_tests.sh /work/ocudu-docker/scripts/run_tests.sh
+RUN OCUDU_REQUIRE_SCTP=${OCUDU_REQUIRE_SCTP} /work/ocudu-docker/scripts/run_tests.sh host
 
 # ---------------------------------------------------------------------------
 FROM ocudu-host AS dapp-sdk
 
 ARG OCUDU_JOBS=8
+ARG OCUDU_REQUIRE_SCTP=0
 COPY ocudu-dapp-sdk /work/ocudu-dapp-sdk
 RUN --mount=type=cache,id=ocudu-sdk-cpu-ccache,target=/root/.cache/ccache \
     cmake -S /work/ocudu-dapp-sdk -B /work/ocudu-dapp-sdk/build -G Ninja \
@@ -114,8 +115,7 @@ RUN --mount=type=cache,id=ocudu-sdk-cpu-ccache,target=/root/.cache/ccache \
       -DOCUDU_DAPP_REQUIRE_ABI_COMPILER_MATRIX=ON \
       -DOCUDU_DAPP_REQUIRE_PYTHON_EXAMPLES=ON \
   && cmake --build /work/ocudu-dapp-sdk/build --parallel ${OCUDU_JOBS} \
-  && OCUDU_E3AP_TEST_SERVER=/work/ocudu/build/tests/unittests/dapp/e3ap_test_server \
-     ctest --test-dir /work/ocudu-dapp-sdk/build --output-on-failure -j2 \
+  && OCUDU_REQUIRE_SCTP=${OCUDU_REQUIRE_SCTP} /work/ocudu-docker/scripts/run_tests.sh sdk \
   && cmake --install /work/ocudu-dapp-sdk/build --prefix /opt/ocudu
 
 # ---------------------------------------------------------------------------

@@ -197,6 +197,12 @@ enters this build context.
 The default CUDA architecture set is `89-real;90-real;121`: RTX 4090, GH200,
 and GB10. Override `OCUDU_CUDA_ARCHITECTURES` for a narrower deployment image.
 
+The E3 transports run over SCTP, which comes from the kernel of the machine
+running the build (`sudo modprobe sctp`). Without it, the gates skip the SCTP
+transport tests, the Python E3 client test and the SDK examples' live E3
+checks with a notice and run everything else; `OCUDU_REQUIRE_SCTP=1` makes a
+missing SCTP a build failure.
+
 ## Build
 
 ```bash
@@ -232,7 +238,8 @@ merge request and tag:
 | Job | What it does |
 |-----|--------------|
 | `lint` | `bash -n` and `shellcheck` on the scripts; the requested platform and SDK refs exist |
-| `cpu image` | `fetch_sources.sh` → `cpu-release` build (the host, E3 and full SDK gates run in the build) → `run_tests.sh` again in the finished image → an E3 smoke test across two containers (loopback agent, Python client: catalog and a live `pusch.crc`/`srs.channel` subscription) → push to this project's registry from the default branch and tags |
+| `cpu image` | `fetch_sources.sh` → `cpu-release` build (the host and full SDK gates run in the build) → `run_tests.sh` again in the finished image → push to this project's registry from the default branch and tags |
+| `cpu e3 gates` | in that image, on a runner with SCTP: the E3 gates over SCTP (`OCUDU_REQUIRE_SCTP=1`) and a live E3 smoke test (loopback agent on all interfaces, Python client through the container's address: catalog and a `pusch.crc`/`srs.channel` subscription); enabled by setting `OCUDU_SCTP_RUNNER_TAG` |
 | `cuda image` | the `cuda-release` build with its device-free gates; default branch, tags and schedules, on demand otherwise |
 | `cuda gpu gates` | `run_cuda_tests.sh` with `--gpus all`; enabled by setting `OCUDU_GPU_RUNNER_TAG` to a GPU runner's tag |
 
@@ -242,9 +249,11 @@ nightly pipeline to catch drift between the two main branches. As in the
 platform CI, `OCUDU_RUNNER_TAG` is the runner size prefix: the image jobs run
 on `${OCUDU_RUNNER_TAG}-amd64`, `saas-linux-medium` by default, and a group
 or project CI/CD variable selects another size (the WG2 group uses
-`saas-linux-large`); `OCUDU_JOBS` sets the build parallelism. The E3 gates
-need SCTP from the runner kernel, and the jobs stop early with a clear message
-on a runner without it.
+`saas-linux-large`); `OCUDU_JOBS` sets the build parallelism. The GitLab.com
+SaaS runners have no SCTP in their kernel, so the image jobs skip the E3
+transport tests; register a runner on a host with the `sctp` module (the
+platform CI's `sctp` runner, or your own) and set `OCUDU_SCTP_RUNNER_TAG` to its
+tag to run `cpu e3 gates`.
 
 ## Run the gates again or explore
 
