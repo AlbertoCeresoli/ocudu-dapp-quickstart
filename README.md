@@ -23,22 +23,30 @@ the Dockerfile `COPY`s and every cross-repo documentation link use them:
 ```bash
 # clone the set side by side; the platform repo must be cloned as ocudu/
 mkdir ocudu-workspace && cd ocudu-workspace
-git clone https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-platform.git ocudu
+git clone --recurse-submodules https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-platform.git ocudu
 git clone https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-sdk.git
 git clone https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-quickstart.git ocudu-docker
 ```
 
-## Read first: the two papers (preview versions)
+Or clone only this repository and let it fetch the other two next to it
+(`main` by default; `OCUDU_PLATFORM_REF`/`OCUDU_SDK_REF` pick another commit,
+branch or tag, and `--update` moves existing checkouts to them):
 
-Two papers explain the motivation, architecture, measurements, and workflow
-behind everything in this quickstart. Both are preview versions that
-accompany this pre-release and will receive updates as the working group's
-review, new use cases, and measurements land.
+```bash
+git clone https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-quickstart.git ocudu-workspace/ocudu-docker
+ocudu-workspace/ocudu-docker/scripts/fetch_sources.sh
+```
+
+## Read first: the papers
+
+Three papers explain the motivation, architecture, measurements, and workflow
+behind everything in this quickstart:
 
 | Paper | What it gives you |
 |---|---|
-| [**The OCUDU dApp Platform: An Open Runtime and E3 Interface for Real-Time AI-RAN**](papers/ocudu_dapp_tutorial.pdf) | the architecture and tutorial paper: the 3 execution classes, the E3 plane, where every mechanism lives in the code, how to build, sign, load, and drive a dApp, the 7 use cases, the safety and latency design, and the measured evidence |
-| [**Enabling AI-RAN Applications Through dApp Architecture Decisions: A Measured Study**](papers/ocudu_dapp_interface_study.pdf) | the interface study: an audited corpus of 39 AI-RAN use cases with deadlines and byte counts, the coupling spectrum from an in-process C ABI to E3AP over SCTP, measurements of the real mechanisms used by the OCUDU, Northeastern, and NVIDIA dApp frameworks on a quiet host and with the cell on the air, and the derivation of the released ABI |
+| [**The OCUDU dApp Platform: An Open Runtime and E3 Interface for Real-Time AI-RAN**](https://arxiv.org/abs/2609.07843) (arXiv:2609.07843) | the architecture and tutorial paper: the 3 execution classes, the E3 plane, where every mechanism lives in the code, how to build, sign, load, and drive a dApp, the use cases, the safety and latency design, and the measured evidence |
+| [**Real-Time dApps for AI-RAN: Measured Interface Requirements for Inline PHY and Slot-Level Control**](https://arxiv.org/abs/2609.07805) (arXiv:2609.07805) | the interface study: an audited corpus of AI-RAN use cases with deadlines and byte counts, the coupling spectrum from an in-process C ABI to E3AP over SCTP, measurements of the real mechanisms used by the OCUDU, Northeastern, and NVIDIA dApp frameworks on a quiet host and with the cell on the air, and the derivation of the released ABI |
+| [**GPU-Resident CUDA Acceleration for OCUDU 5G PHY and O-RAN Fronthaul: Architecture and Preliminary Performance**](https://arxiv.org/abs/2608.04338) (arXiv:2608.04338) | the CUDA-accelerated L1 the `cuda-release` image builds: the GPU-resident PHY and fronthaul architecture that the device-resident Class-A dApps plug into, and its preliminary performance |
 
 ## Start here — the guided path
 
@@ -67,7 +75,7 @@ live cell (1–4 need no keys):
 
 ## Documentation map
 
-**Papers (preview)** — [architecture and tutorial paper](papers/ocudu_dapp_tutorial.pdf) · [interface study](papers/ocudu_dapp_interface_study.pdf)
+**Papers** — [architecture and tutorial paper](https://arxiv.org/abs/2609.07843) · [interface study](https://arxiv.org/abs/2609.07805) · [CUDA-accelerated OCUDU](https://arxiv.org/abs/2608.04338)
 
 **Platform (gNB, runtime, E3)** — [docs index](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-platform/-/blob/main/docs/dapp/README.md):
 [quickstart](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-platform/-/blob/main/docs/dapp/quickstart.md) ·
@@ -83,7 +91,9 @@ live cell (1–4 need no keys):
 [release checklist](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-platform/-/blob/main/docs/dapp/release_checklist.md) ·
 [known limitations](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-platform/-/blob/main/docs/dapp/known_limitations.md) ·
 [glossary](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-platform/-/blob/main/docs/dapp/glossary.md) ·
-[proposing extensions](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-platform/-/blob/main/docs/dapp/proposing_extensions.md)
+[proposing extensions](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-platform/-/blob/main/docs/dapp/proposing_extensions.md) ·
+[per-UE PUSCH routing](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-platform/-/blob/main/docs/dapp/pusch_routing.md) ·
+[SRS channel-estimator dApps](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-platform/-/blob/main/docs/dapp/srs_channel_estimator.md)
 
 **SDK (authoring dApps)** — [docs index](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-sdk/-/blob/main/docs/README.md) ·
 [getting started ladder](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-sdk/-/blob/main/README.md):
@@ -112,12 +122,59 @@ live cell (1–4 need no keys):
 [spectrum sensing over E3](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-sdk/-/blob/main/examples/e3_spectrum_sensing/README.md) ·
 [SRS-ISAC starting point](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-sdk/-/blob/main/examples/e3_isac_sensing/README.md) ·
 [Python Class-C sensing](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-sdk/-/blob/main/examples/class_c_e3_python/README.md) ·
+[SINR-driven receiver routing](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-sdk/-/blob/main/examples/e3_receiver_routing/README.md) ·
+[SRS channel-estimation datasets](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-sdk/-/blob/main/examples/e3_srs_dataset/README.md) ·
 [MCP server](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-sdk/-/blob/main/examples/e3_mcp_server/README.md)
+
+## Featured use cases
+
+### Several neural receivers at once, chosen per UE
+
+The gNB can run several Class-A PUSCH dApps side by side — channel
+estimators, equalizers, full receivers — and serve each UE's grants with the
+one its entry in a host **route table** names, or with the stock receiver. The
+table is set over E3 at control rates; the per-grant lookup is lock-free in the
+PUSCH worker, and it works the same way for CPU and CUDA dApps.
+[`e3_receiver_routing/sinr_router.py`](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-sdk/-/blob/main/examples/e3_receiver_routing/README.md)
+is a slower controller dApp that watches each UE's uplink SINR over E3 and
+assigns receivers to RNTIs — one receiver below a threshold, another (or the
+stock receiver) above it, with hysteresis and hold times. Run it against the
+loopback agent of this testbed, then against a live cell with two receivers
+loaded (`dapp.pusch_route_slots: 2`).
+
+- Platform: [per-UE routing of Class-A PUSCH dApps](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-platform/-/blob/main/docs/dapp/pusch_routing.md)
+  — the route model, `puschRouting` over E3, `dappctl pusch-route`, metrics.
+- SDK: [SINR-driven receiver routing example](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-sdk/-/blob/main/examples/e3_receiver_routing/README.md).
+
+### SRS channel estimation as a dApp
+
+A Class-A **SRS channel-estimator** dApp (`0x00010007`) replaces the gNB's SRS
+estimator: SRS pilots and reference sequences in, the wideband channel matrix,
+noise, EPRE, RSRP and time alignment out, published to the scheduler, the
+SRS-ISAC route and E3 exactly like the gNB's own. The SDK ships CPU and CUDA
+reference implementations that reproduce the gNB's estimator to
+single-precision rounding, checked against golden vectors the platform
+generates — a verified starting point for a learned estimator. The
+`srs.channel` stream carries the estimator's exact input, so a capture of it is
+a training set:
+[`e3_srs_dataset`](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-sdk/-/blob/main/examples/e3_srs_dataset/README.md) records SRS
+channel-estimation datasets from a live cell (pilots, references, the gNB's
+answer and each UE's link state) and `ocudu-dapp-srs-replay` replays them
+through the reference estimator.
+
+- Platform: [SRS channel-estimator dApps](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-platform/-/blob/main/docs/dapp/srs_channel_estimator.md)
+  — contract, backends, profile, metrics, datasets.
+- SDK: [reference packages](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-sdk/-/blob/main/docs/reference_packages.md)
+  (`ref_srs_channel_estimator_cpu`, `ref_srs_channel_estimator_cuda`) ·
+  [SRS dataset example](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-sdk/-/blob/main/examples/e3_srs_dataset/README.md) ·
+  [`ocudu-dapp-srs-replay`](https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-sdk/-/blob/main/docs/tools.md).
 
 ## The images
 
 One Dockerfile builds the two public release repositories from their current
-workspace contents without using host build trees:
+workspace contents without using host build trees (fetch them with
+`scripts/fetch_sources.sh`; the images record both commits in their
+`org.ocudu.platform.revision` and `org.ocudu.sdk.revision` labels):
 
 - `ocudu`: host dApp runtime, E3 management/telemetry, tools, and gNB;
 - `ocudu-dapp-sdk`: CPU and CUDA reference packages plus public examples.
@@ -132,7 +189,7 @@ enters this build context.
 |-------|----------------|---------------|
 | `toolchain` | compilers, `asn1c` (mouse07410 fork, pinned, APER generator), `flatc`, Python venv with `asn1tools` | — |
 | `ocudu-host` | OCUDU with `ENABLE_DAPP/ENABLE_E3/ENABLE_E3_ASN1_CODEC` (CPU) and radio support (`ENABLE_UHD`, split-7.2 OFH, `ENABLE_DPDK`), `gnb`, `ocudu-dappctl`, preflight and packaging tools, `dapp_runtime_test`, the loopback E3 agent; installs the `dapp_sdk` component to `/opt/ocudu` | `dapp_runtime_test` (runtime, E3 codecs, SCTP carriers), Python E3AP cross-language test, release-docs check |
-| `dapp-sdk` | standalone CPU `ocudu-dapp-sdk` against `/opt/ocudu` (reference packages, ABI matrix, install consumer) | full CPU SDK `ctest` |
+| `dapp-sdk` | standalone CPU `ocudu-dapp-sdk` against `/opt/ocudu` (reference packages, ABI matrix, install consumer) | full CPU SDK `ctest`, including the Python E3 examples (routing, SRS datasets, telemetry) against the loopback agent |
 | `cpu-release` | the portable image: the two stages above plus scripts and environment | — |
 | `cuda-toolchain` | multi-architecture CUDA 13 compiler/runtime development environment | device-free toolchain checks |
 | `cuda-release` | CUDA-accelerated gNB host (`ENABLE_CUDA`, radio support included) plus the CUDA reference SDK (every reference package, manifest, SBOM, certifier) | ABI/install/docs gates during image construction |
@@ -156,9 +213,35 @@ docker compose -f ocudu-docker/docker-compose.yml build release release-cuda
 ```
 
 Useful arguments: `OCUDU_JOBS` (parallelism, default 8), `OCUDU_BUILD_TYPE`
-(`Release` default), `OCUDU_CUDA_ARCHITECTURES`, `OCUDU_CUDA_IMAGE`, and
-`OCUDU_DOCKER_CPUSET`. `ASN1C_COMMIT` is a Dockerfile argument pinned to the
-release's APER-capable `asn1c` fork.
+(`Release` default), `OCUDU_CUDA_ARCHITECTURES`, `OCUDU_CUDA_IMAGE`,
+`OCUDU_DOCKER_CPUSET` and `OCUDU_DOCKER_BUILD_ARGS` (extra `docker build`
+arguments, e.g. `--progress=plain`). `ASN1C_COMMIT` is a Dockerfile argument
+pinned to the release's APER-capable `asn1c` fork.
+
+`OCUDU_DOCKER_CPUSET=5-9,14` confines the whole build to those CPUs, e.g. to
+keep a gNB on the same host undisturbed. BuildKit ignores `docker build
+--cpuset-cpus`, so `build.sh` then builds in a dedicated `buildx` builder
+(`docker-container` driver, created once with that CPU set) and loads the
+images into the local image store.
+
+## Continuous integration
+
+`.gitlab-ci.yml` builds the images from the public repositories on every push,
+merge request and tag:
+
+| Job | What it does |
+|-----|--------------|
+| `lint` | `bash -n` and `shellcheck` on the scripts; the requested platform and SDK refs exist |
+| `cpu image` | `fetch_sources.sh` → `cpu-release` build (the host, E3 and full SDK gates run in the build) → `run_tests.sh` again in the finished image → an E3 smoke test across two containers (loopback agent, Python client: catalog and a live `pusch.crc`/`srs.channel` subscription) → push to this project's registry from the default branch and tags |
+| `cuda image` | the `cuda-release` build with its device-free gates; default branch, tags and schedules, on demand otherwise |
+| `cuda gpu gates` | `run_cuda_tests.sh` with `--gpus all`; enabled by setting `OCUDU_GPU_RUNNER_TAG` to a GPU runner's tag |
+
+The platform and SDK default to `main`; run a pipeline with
+`OCUDU_PLATFORM_REF`/`OCUDU_SDK_REF` set to build another pair, and schedule a
+nightly pipeline to catch drift between the two main branches. The E3 gates
+need SCTP from the runner kernel; the jobs run on `saas-linux-large-amd64`
+(override `OCUDU_RUNNER_TAG`) and stop early with a clear message on a runner
+without it.
 
 ## Run the gates again or explore
 
@@ -180,13 +263,16 @@ be pointed at this loopback testbed instead of a live cell.
 
 `docker compose -f ocudu-docker/docker-compose.yml up e3-agent` starts the loopback E3 agent (synthetic PUSCH
 symbols/CRC, SRS, gNB JSON) on E3AP `sctp/36423` and the FlatBuffers data
-profile on `sctp/38472`. From the host:
+profile on `sctp/38472`, listening on all interfaces of the container
+(`--bind-address 0.0.0.0`) so the published ports reach it. From the host:
 
 ```bash
 export PYTHONPATH=ocudu/python
 export OCUDU_E3_SCHEMA_DIR=ocudu/schemas/e3
 python3 -m ocudu_e3 --port 36423 catalog
 python3 -m ocudu_e3 --port 36423 subscribe pusch.symbols pusch.crc --maximum 5
+python3 ocudu-dapp-sdk/examples/e3_receiver_routing/sinr_router.py --below conventional --above primary --dry-run --duration 10
+python3 ocudu-dapp-sdk/examples/e3_srs_dataset/capture_srs_dataset.py --duration 5 --output srs.h5
 python3 ocudu/apps/tools/dappctl/ocudu_dappctl.py --sctp 127.0.0.1:36423 inventory
 ```
 
@@ -266,7 +352,7 @@ flow run on the CPU image.
 
 The build context is the workspace root; the tracked
 `Dockerfile.dockerignore` excludes host `build*/` trees, `.git`, and caches so
-a stale host CMake cache can never leak into the image. A public checkout needs only `ocudu/` and `ocudu-dapp-sdk/`;
+a stale host CMake cache can never leak into the image. A public checkout needs only `ocudu/`, `ocudu-dapp-sdk/` and `ocudu-docker/`;
 if other sibling repos happen to sit in the workspace they are uploaded with
 the context but only the COPY'd public paths ever enter an image layer.
 

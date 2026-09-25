@@ -11,8 +11,9 @@
 # Only the two public repositories are used; vendor-internal packages layer
 # their own image on top of these targets from a separate overlay.
 #
-# Build context: the workspace that contains ./ocudu and ./ocudu-dapp-sdk
-# side by side.
+# Build context: the workspace that contains ./ocudu (ocudu-dapp-platform),
+# ./ocudu-dapp-sdk and ./ocudu-docker side by side; scripts/fetch_sources.sh
+# clones the public repositories into that layout (main by default).
 #
 #   docker build --target cpu-release -f ocudu-docker/Dockerfile \
 #     -t ocudu-dapp-release:cpu .
@@ -111,13 +112,24 @@ RUN --mount=type=cache,id=ocudu-sdk-cpu-ccache,target=/root/.cache/ccache \
       -DOCUDU_DAPP_BUILD_PYTHON_CLASS_C=OFF \
       -DOCUDU_DAPP_REF_EXTRAS=ON \
       -DOCUDU_DAPP_REQUIRE_ABI_COMPILER_MATRIX=ON \
+      -DOCUDU_DAPP_REQUIRE_PYTHON_EXAMPLES=ON \
   && cmake --build /work/ocudu-dapp-sdk/build --parallel ${OCUDU_JOBS} \
-  && ctest --test-dir /work/ocudu-dapp-sdk/build --output-on-failure -j2 \
+  && OCUDU_E3AP_TEST_SERVER=/work/ocudu/build/tests/unittests/dapp/e3ap_test_server \
+     ctest --test-dir /work/ocudu-dapp-sdk/build --output-on-failure -j2 \
   && cmake --install /work/ocudu-dapp-sdk/build --prefix /opt/ocudu
 
 # ---------------------------------------------------------------------------
 # Stable public name for the portable image.
 FROM dapp-sdk AS cpu-release
+
+# Which sources the image was built from (scripts/build.sh passes them from
+# the workspace's sources.env or the checkouts themselves).
+ARG OCUDU_PLATFORM_REVISION=unknown
+ARG OCUDU_SDK_REVISION=unknown
+LABEL org.opencontainers.image.title="OCUDU dApp release" \
+      org.opencontainers.image.source="https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-quickstart" \
+      org.ocudu.platform.revision="${OCUDU_PLATFORM_REVISION}" \
+      org.ocudu.sdk.revision="${OCUDU_SDK_REVISION}"
 
 COPY --chmod=0755 ocudu-docker/scripts /work/ocudu-docker/scripts
 COPY ocudu-docker/examples /work/ocudu-docker/examples
@@ -217,6 +229,15 @@ RUN --mount=type=cache,id=ocudu-sdk-cuda-ccache,target=/root/.cache/ccache \
   && cmake --install /work/ocudu-dapp-sdk/build-cuda --prefix /opt/ocudu
 
 COPY --chmod=0755 ocudu-docker/scripts /work/ocudu-docker/scripts
+
+# Which sources the image was built from (scripts/build.sh passes them from
+# the workspace's sources.env or the checkouts themselves).
+ARG OCUDU_PLATFORM_REVISION=unknown
+ARG OCUDU_SDK_REVISION=unknown
+LABEL org.opencontainers.image.title="OCUDU dApp release" \
+      org.opencontainers.image.source="https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-quickstart" \
+      org.ocudu.platform.revision="${OCUDU_PLATFORM_REVISION}" \
+      org.ocudu.sdk.revision="${OCUDU_SDK_REVISION}"
 
 ENV OCUDU_E3_SCHEMA_DIR=/work/ocudu/schemas/e3 \
     OCUDU_E3_PYTHON_DIR=/work/ocudu/python \

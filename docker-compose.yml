@@ -58,6 +58,8 @@ services:
       - /work/ocudu/build/tests/unittests/dapp/e3ap_test_server
       - --catalog
       - /tmp
+      - --bind-address
+      - 0.0.0.0
       - --e3ap-port
       - "36423"
       - --e3dp-port
