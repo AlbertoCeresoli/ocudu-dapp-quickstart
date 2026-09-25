@@ -238,10 +238,12 @@ merge request and tag:
 
 The platform and SDK default to `main`; run a pipeline with
 `OCUDU_PLATFORM_REF`/`OCUDU_SDK_REF` set to build another pair, and schedule a
-nightly pipeline to catch drift between the two main branches. The E3 gates
-need SCTP from the runner kernel; the jobs run on `saas-linux-large-amd64`
-(override `OCUDU_RUNNER_TAG`) and stop early with a clear message on a runner
-without it.
+nightly pipeline to catch drift between the two main branches. The jobs run
+on the default GitLab.com runner (`saas-linux-small-amd64`, 2 vCPUs, so a
+cold CPU image build takes a while); with a larger or self-hosted runner, set
+`OCUDU_RUNNER_TAG` to its tag and raise `OCUDU_JOBS`. The E3 gates need SCTP
+from the runner kernel, and the jobs stop early with a clear message on a
+runner without it.
 
 ## Run the gates again or explore
 

@@ -26,9 +26,12 @@ variables:
   OCUDU_PLATFORM_REF: main
   OCUDU_SDK_URL: https://gitlab.com/ocudu/work_groups/wg2_ai_ran/ocudu-dapp-sdk.git
   OCUDU_SDK_REF: main
-  OCUDU_JOBS: "8"
-  # The E3 gates need SCTP from the runner's kernel; the large SaaS runners provide it.
-  OCUDU_RUNNER_TAG: saas-linux-large-amd64
+  # Sized for the default GitLab.com runner (saas-linux-small-amd64: 2 vCPUs, 8 GB), which
+  # every namespace has. On Premium/Ultimate, or with your own runner, set OCUDU_RUNNER_TAG
+  # (e.g. saas-linux-large-amd64) and raise OCUDU_JOBS to match. The E3 gates need SCTP
+  # from the runner's kernel; the jobs check for it first.
+  OCUDU_JOBS: "2"
+  OCUDU_RUNNER_TAG: saas-linux-small-amd64
   DOCKER_VERSION: "28"
   DOCKER_TLS_CERTDIR: /certs
   OCUDU_WORKSPACE: ${CI_PROJECT_DIR}/workspace
